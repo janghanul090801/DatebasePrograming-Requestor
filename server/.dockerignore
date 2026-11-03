@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log*
+*.log
+
+# 환경변수는 docker compose에서 주입합니다.
+.env
+.env.*
+!.env.example
+
+uploads
+.git
+.gitignore
