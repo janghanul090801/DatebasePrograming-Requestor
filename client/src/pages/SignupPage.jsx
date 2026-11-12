@@ -12,7 +12,6 @@ const SignupPage = ({ setIsLoggedIn }) => {
     email: location.state?.email ?? '',
     password: '',
     nickname: '',
-    phone_number: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -105,32 +104,17 @@ const SignupPage = ({ setIsLoggedIn }) => {
           </PasswordWrap>
         </FieldGroup>
 
-        <TwoColumns>
-          <FieldGroup>
-            <Label htmlFor="nickname">닉네임</Label>
-            <Input
-              id="nickname"
-              name="nickname"
-              placeholder="표시할 이름"
-              value={form.nickname}
-              onChange={handleChange}
-              required
-            />
-          </FieldGroup>
-
-          <FieldGroup>
-            <Label htmlFor="phone_number">전화번호</Label>
-            <Input
-              id="phone_number"
-              name="phone_number"
-              type="tel"
-              placeholder="010-0000-0000"
-              value={form.phone_number}
-              onChange={handleChange}
-              required
-            />
-          </FieldGroup>
-        </TwoColumns>
+        <FieldGroup>
+          <Label htmlFor="nickname">닉네임</Label>
+          <Input
+            id="nickname"
+            name="nickname"
+            placeholder="표시할 이름"
+            value={form.nickname}
+            onChange={handleChange}
+            required
+          />
+        </FieldGroup>
 
         {error && <ErrorBox>{error}</ErrorBox>}
 
@@ -155,16 +139,6 @@ const FieldGroup = styled.div`
   flex-direction: column;
   gap: 7px;
   min-width: 0;
-`;
-
-const TwoColumns = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-  }
 `;
 
 const Label = styled.label`

@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/workspace/Sidebar';
 import RequestBuilder from '../components/workspace/RequestBuilder';
 import ResponsePanel from '../components/workspace/ResponsePanel';
+import ProfileModal from '../components/workspace/ProfileModal';
 import { requestsApi } from '../api/requests';
 import { usersApi } from '../api/users';
 import { sendRequest } from '../api/proxy';
@@ -35,6 +36,8 @@ const WorkspacePage = ({ isLoggedIn, setIsLoggedIn }) => {
   const [response, setResponse] = useState(null);
   const [toast, setToast] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 760);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileUser, setProfileUser] = useState(null);
   const [userEmail] = useState(getUserEmail);
 
   const toastTimer = useRef(null);
@@ -318,6 +321,85 @@ const WorkspacePage = ({ isLoggedIn, setIsLoggedIn }) => {
     return () => window.removeEventListener('keydown', handler);
   });
 
+  // 계정 관리 모달 열기 (최신 프로필 조회)
+  const handleOpenProfile = async () => {
+    try {
+      const me = await usersApi.getMe();
+      setProfileUser({
+        id: me.id,
+        email: me.email,
+        nickname: me.nickname,
+      });
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      setProfileUser(overview?.user ?? null);
+      showToast(error.message, 'error');
+    }
+
+    setProfileOpen(true);
+  };
+
+  // 프로필 수정 (PUT /api/users/me)
+  const handleUpdateProfile = async (payload) => {
+    try {
+      const data = await usersApi.updateMe(payload);
+
+      try {
+        const stored = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem(
+          'user',
+          JSON.stringify({ ...stored, nickname: payload.nickname })
+        );
+      } catch {
+        // localStorage 값이 깨져 있어도 프로필 수정은 계속 진행한다.
+      }
+
+      setProfileUser((prev) => ({
+        ...prev,
+        nickname: payload.nickname,
+      }));
+      setOverview((prev) =>
+        prev
+          ? {
+              ...prev,
+              user: {
+                ...prev.user,
+                nickname: payload.nickname,
+              },
+            }
+          : prev
+      );
+
+      setProfileOpen(false);
+      showToast(data?.message || '프로필 정보가 수정되었습니다.');
+      refreshStats();
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      throw error;
+    }
+  };
+
+  // 회원 탈퇴 (DELETE /api/users/me)
+  const handleWithdraw = async (password) => {
+    try {
+      await usersApi.withdraw(password);
+
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setProfileOpen(false);
+      setIsLoggedIn(false);
+      navigate('/login', {
+        replace: true,
+        state: {
+          email: profileUser?.email || overview?.user?.email || userEmail,
+        },
+      });
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      throw error;
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -343,6 +425,7 @@ const WorkspacePage = ({ isLoggedIn, setIsLoggedIn }) => {
           onSelect={handleSelect}
           onDelete={handleDelete}
           onLogout={handleLogout}
+          onOpenProfile={handleOpenProfile}
           onCollapse={() => setSidebarOpen(false)}
         />
       )}
@@ -364,6 +447,15 @@ const WorkspacePage = ({ isLoggedIn, setIsLoggedIn }) => {
       </Main>
 
       {toast && <Toast $type={toast.type}>{toast.message}</Toast>}
+
+      {profileOpen && (
+        <ProfileModal
+          user={profileUser}
+          onClose={() => setProfileOpen(false)}
+          onUpdate={handleUpdateProfile}
+          onWithdraw={handleWithdraw}
+        />
+      )}
     </Shell>
   );
 };

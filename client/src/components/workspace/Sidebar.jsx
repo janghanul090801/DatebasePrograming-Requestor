@@ -7,6 +7,7 @@ import {
   FaSearch,
   FaSignOutAlt,
   FaTrashAlt,
+  FaUserCog,
 } from 'react-icons/fa';
 import { formatDate, METHOD_COLORS } from '../../utils/requestUtils';
 
@@ -28,6 +29,7 @@ const Sidebar = ({
   onSelect,
   onDelete,
   onLogout,
+  onOpenProfile,
   onCollapse,
 }) => {
   const [keyword, setKeyword] = useState('');
@@ -180,6 +182,13 @@ const Sidebar = ({
           </UserName>
           <UserRole>{overview?.user?.email || 'Personal workspace'}</UserRole>
         </UserInfo>
+        <ProfileButton
+          type="button"
+          onClick={onOpenProfile}
+          title="계정 관리 (프로필 수정 / 회원 탈퇴)"
+        >
+          <FaUserCog />
+        </ProfileButton>
         <LogoutButton type="button" onClick={onLogout} title="로그아웃">
           <FaSignOutAlt />
         </LogoutButton>
@@ -666,5 +675,21 @@ const LogoutButton = styled.button`
   &:hover {
     background: #2c2c2c;
     color: #ff8787;
+  }
+`;
+
+const ProfileButton = styled.button`
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: transparent;
+  color: #7f7f7f;
+  font-size: 12px;
+
+  &:hover {
+    background: #2c2c2c;
+    color: #ffb59b;
   }
 `;

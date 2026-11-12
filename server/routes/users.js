@@ -7,9 +7,9 @@ import { authenticateToken } from '../middlewares/auth.js';
 const router = express.Router();
 
 router.post('/signup', async (req, res) => {
-  const { email, password, nickname, phone_number } = req.body;
+  const { email, password, nickname } = req.body;
 
-  if (!email || !password || !nickname || !phone_number) {
+  if (!email || !password || !nickname) {
     return res.status(400).json({ message: '모든 필수 정보를 입력해 주세요.' });
   }
 
@@ -17,9 +17,9 @@ router.post('/signup', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await db.query(
-      `INSERT INTO users (email, password, nickname, phone_number)
-       VALUES (?, ?, ?, ?)`,
-      [email, hashedPassword, nickname, phone_number]
+      `INSERT INTO users (email, password, nickname)
+       VALUES (?, ?, ?)`,
+      [email, hashedPassword, nickname]
     );
 
     const userId = result.insertId;
@@ -37,7 +37,7 @@ router.post('/signup', async (req, res) => {
 
   } catch (error) {
     if (error.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ message: '이미 등록된 회원 정보(이메일/전화번호)입니다.' });
+      return res.status(409).json({ message: '이미 등록된 이메일입니다.' });
     }
     console.error('회원가입 에러:', error);
     return res.status(500).json({ message: '서버 에러가 발생했습니다.' });
@@ -97,7 +97,7 @@ router.get('/me/overview', authenticateToken, async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT
-         u.id, u.email, u.nickname, u.phone_number, u.created_at,
+         u.id, u.email, u.nickname, u.created_at,
          COUNT(r.id) AS request_count,
          COALESCE(SUM(r.method = 'GET'), 0) AS get_count,
          COALESCE(SUM(r.method = 'POST'), 0) AS post_count,
@@ -108,7 +108,7 @@ router.get('/me/overview', authenticateToken, async (req, res) => {
        FROM users u
        LEFT JOIN requests r ON r.user_id = u.id
        WHERE u.id = ?
-       GROUP BY u.id, u.email, u.nickname, u.phone_number, u.created_at`,
+       GROUP BY u.id, u.email, u.nickname, u.created_at`,
       [userId]
     );
 
@@ -123,7 +123,6 @@ router.get('/me/overview', authenticateToken, async (req, res) => {
         id: row.id,
         email: row.email,
         nickname: row.nickname,
-        phoneNumber: row.phone_number,
         createdAt: row.created_at,
       },
       stats: {
@@ -193,7 +192,7 @@ router.get('/me', authenticateToken, async (req, res) => {
     }
 
     const [users] = await db.query(
-      'SELECT id, email, nickname, phone_number, created_at FROM users WHERE id = ?',
+      'SELECT id, email, nickname, created_at FROM users WHERE id = ?',
       [userId]
     );
 
@@ -211,7 +210,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 router.put('/me', authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.id || req.user?.userId || req.user?.user_id;
-    const { currentPassword, nickname, phone_number } = req.body;
+    const { currentPassword, nickname } = req.body;
 
     if (!userId) {
       return res.status(400).json({ message: '유효하지 않은 토큰 정보입니다.' });
@@ -231,8 +230,8 @@ router.put('/me', authenticateToken, async (req, res) => {
     }
 
     await db.query(
-      'UPDATE users SET nickname = ?, phone_number = ? WHERE id = ?',
-      [nickname, phone_number, userId]
+      'UPDATE users SET nickname = ? WHERE id = ?',
+      [nickname, userId]
     );
 
     res.json({ message: '프로필 정보가 성공적으로 수정되었습니다.' });
