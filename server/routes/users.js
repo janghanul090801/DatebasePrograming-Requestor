@@ -142,8 +142,6 @@ router.get('/me/overview', authenticateToken, async (req, res) => {
   }
 });
 
-// 2-3. 자주 사용한 요청 URL Top N (users JOIN requests + GROUP BY)
-// GET /api/users/me/top-endpoints?limit=5
 router.get('/me/top-endpoints', authenticateToken, async (req, res) => {
   try {
     const userId = req.user?.id || req.user?.userId || req.user?.user_id;
