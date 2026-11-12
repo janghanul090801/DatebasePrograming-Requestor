@@ -1,19 +1,25 @@
-import {useState} from 'react'
+import { useState } from 'react';
 import styled from 'styled-components';
-import { useNavigate, useLocation, useOutletContext } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import AuthShell from '../components/AuthShell';
 
-const LoginPage = () => {
+const LoginPage = ({ setIsLoggedIn }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setIsLoggedIn } = useOutletContext(); // Layout에서 전달된 상태 변경 함수
-  
-  const [email, setEmail] = useState('');
+
+  const [email, setEmail] = useState(location.state?.email ?? '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const redirectTo = location.state?.redirectTo || '/';
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
 
     try {
       const response = await fetch('/api/users/login', {
@@ -22,89 +28,184 @@ const LoginPage = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
-      if (response.ok) {
-        localStorage.setItem('token', data.token);
-        setIsLoggedIn(true); // 전역 로그인 상태 변경
-        alert('로그인되었습니다.');
-        navigate(redirectTo);
-      } else {
-        // 💡 1. 백엔드 응답 메시지에 '등록' 또는 '존재하지' 않는 회원이라는 문구가 포함되어 있거나 
-        // 💡 2. 특정 status(예: 404)일 때 회원가입 페이지로 이동 처리
-        if (response.status === 404 || data.message?.includes('등록') || data.message?.includes('존재')) {
-          alert('등록된 회원이 없습니다. 회원가입 페이지로 이동합니다.');
-          navigate('/signup'); // 👈 회원가입 라우트 경로로 이동
-        } else {
-          alert(data.message || '로그인 실패');
-        }
+      if (!response.ok) {
+        setError(data?.message || '로그인에 실패했습니다.');
+        return;
       }
-    } catch (error) {
-      console.error('로그인 에러:', error);
-      alert('서버 통신 중 에러가 발생했습니다.');
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user ?? { email }));
+      setIsLoggedIn(true);
+      navigate(redirectTo, { replace: true });
+    } catch (err) {
+      console.error('로그인 에러:', err);
+      setError('서버와 통신할 수 없습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Container>
-      <Title>로그인</Title>
+    <AuthShell
+      title="다시 만나서 반가워요"
+      subtitle="저장해 둔 API 요청을 이어서 실행해 보세요."
+      footer={
+        <FooterText>
+          아직 계정이 없나요? <Link to="/signup">회원가입</Link>
+        </FooterText>
+      }
+    >
       <Form onSubmit={handleLogin}>
-        <Input 
-          type="email" 
-          placeholder="학교 이메일 입력" 
-          value={email} 
-          onChange={(e) => setEmail(e.target.value)} 
-          required 
-        />
-        <Input 
-          type="password" 
-          placeholder="비밀번호 입력" 
-          value={password} 
-          onChange={(e) => setPassword(e.target.value)} 
-          required 
-        />
-        <SubmitButton type="submit">로그인</SubmitButton>
+        <FieldGroup>
+          <Label htmlFor="email">이메일</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
+        </FieldGroup>
+
+        <FieldGroup>
+          <Label htmlFor="password">비밀번호</Label>
+          <PasswordWrap>
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="비밀번호 입력"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+            <EyeButton
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </EyeButton>
+          </PasswordWrap>
+        </FieldGroup>
+
+        {error && <ErrorBox>{error}</ErrorBox>}
+
+        <SubmitButton type="submit" disabled={loading}>
+          {loading ? '로그인 중...' : '로그인'}
+        </SubmitButton>
       </Form>
-    </Container>
+    </AuthShell>
   );
 };
 
 export default LoginPage;
 
-// 🎨 styled-components 정의
-const Container = styled.div`
-  padding: 40px 20px;
-  max-width: 400px;
-  margin: 0 auto;
-`;
-
-const Title = styled.h2`
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 24px;
-  color: #212529;
-`;
-
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+`;
+
+const FieldGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+`;
+
+const Label = styled.label`
+  font-size: 12px;
+  font-weight: 700;
+  color: #495057;
+`;
+
+const PasswordWrap = styled.div`
+  position: relative;
 `;
 
 const Input = styled.input`
-  padding: 12px;
+  width: 100%;
+  padding: 12px 14px;
   border: 1px solid #dee2e6;
-  border-radius: 6px;
+  border-radius: 9px;
   font-size: 14px;
+  color: #212529;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    border-color: #ff6c37;
+    box-shadow: 0 0 0 3px rgba(255, 108, 55, 0.13);
+  }
+
+  &::placeholder {
+    color: #adb5bd;
+  }
+`;
+
+const EyeButton = styled.button`
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  background: none;
+  color: #868e96;
+  font-size: 14px;
+  padding: 4px;
+`;
+
+const ErrorBox = styled.p`
+  padding: 11px 13px;
+  border-radius: 8px;
+  background: #fff5f5;
+  border: 1px solid #ffc9c9;
+  color: #c92a2a;
+  font-size: 12px;
+  line-height: 1.5;
 `;
 
 const SubmitButton = styled.button`
-  padding: 14px;
-  background-color: #FF6F0F;
+  margin-top: 4px;
+  padding: 13px;
+  border-radius: 9px;
+  background: #ff6c37;
   color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-weight: bold;
-  font-size: 15px;
-  cursor: pointer;
+  font-size: 14px;
+  font-weight: 800;
+  transition: background 0.15s, transform 0.15s;
+
+  &:hover:not(:disabled) {
+    background: #e85a28;
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    background: #ffb59b;
+    cursor: not-allowed;
+  }
+`;
+
+const FooterText = styled.p`
+  margin-top: 22px;
+  font-size: 13px;
+  color: #868e96;
+
+  a {
+    color: #ff6c37;
+    font-weight: 700;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 `;

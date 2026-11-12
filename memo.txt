@@ -149,20 +149,24 @@ export default pool;
 - 
 2단계: 데이터베이스(DB) 모델링 미리 그려보기
 
-create database school_market_20615;
-use school_market_20615;
-CREATE TABLE users (
+create database requestor_20615;
+use requestor_20615;
+CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(100) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
+  nickname VARCHAR(50) NOT NULL,
+  phone_number VARCHAR(20) NOT NULL UNIQUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 );
-CREATE TABLE requests (
+CREATE TABLE IF NOT EXISTS requests (
   id INT AUTO_INCREMENT PRIMARY KEY,
   url TEXT NOT NULL,
   method VARCHAR(20) NOT NULL,
   header JSON,
-  body JSON, 
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  body JSON,
+  user_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_products_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
